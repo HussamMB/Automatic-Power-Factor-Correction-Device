@@ -1,0 +1,105 @@
+//LCD Module Connections
+sbit LCD_RS at RB2_bit;
+sbit LCD_EN at RB3_bit;
+sbit LCD_D4 at RB4_bit;
+sbit LCD_D5 at RB5_bit;
+sbit LCD_D6 at RB6_bit;
+sbit LCD_D7 at RB7_bit;
+sbit LCD_RS_Direction at TRISB2_bit;
+sbit LCD_EN_Direction at TRISB3_bit;
+sbit LCD_D4_Direction at TRISB4_bit;
+sbit LCD_D5_Direction at TRISB5_bit;
+sbit LCD_D6_Direction at TRISB6_bit;
+sbit LCD_D7_Direction at TRISB7_bit;
+//End LCD Module Connections
+int powerFactor()
+{
+  int a=0,b=0,t=0,x=0;
+  float tm,pf;
+  TMR1L=0;
+  TMR1H=0;
+  do
+  {
+    if(PORTA.F0 == 1)
+    T1CON.F0 = 1;
+    else if(PORTA.F0 == 0 && T1CON.F0 == 1)
+    {
+      T1CON.F0 = 0;
+      break;
+    }
+  }while(1);
+  a = (TMR1L | (TMR1H<<8)) * 2;
+  TMR1L=0;
+  TMR1H=0;
+  do
+  {
+    if(PORTA.F0 == 1)
+    {
+      T1CON.F0=1;
+      if(PORTA.F1==1)
+      {
+        T1CON.F0=0;
+        break;
+      }
+    }
+  }while(1);
+
+  b = TMR1L | (TMR1H<<8);
+  tm = (float)b/a;
+  pf = cos(tm*2*3.14);
+  x=abs(ceil(pf*100));
+
+  return x;
+}
+
+void main()
+{
+  char c[]="0.00";
+  int a,b,d,x,f,e;
+  float tm,pf;
+
+  Lcd_Init();
+  Lcd_Cmd(_LCD_CURSOR_OFF); // Cursor off
+
+  ADCON1 = 0x08; // To configure PORTA pins as digital
+  TRISA.F0 = 1; // Makes First pin of PORTA as input
+  TRISA.F1 = 1; //Makes Second pin of PORTA as input
+  TRISD.F0 = 0; //Makes Fist pin of PORTD as output
+  TRISD.F1 = 0; //Makes Second pin of PORTD as output
+
+  while(1)
+  {
+    a = powerFactor();
+    Delay_us(50);
+    b = powerFactor();
+    Delay_us(50);
+    d = powerFactor();
+    Delay_us(50);
+    e = powerFactor();
+    Delay_us(50);
+    f = powerFactor();
+
+    x = (a+b+d+f+e)/5;
+    c[3]=x%10 + 0x30;
+    x=x/10;
+    c[2]=x%10 + 0x30;
+    x=x/10;
+    c[0]=x%10 + 0x30;
+
+    Lcd_Out(1,1,"Power Factor");
+    Lcd_Out(2,1,c);
+
+    if(x<90)
+    {
+      PORTD.F0 = 1;
+      PORTD.F0 = 1;
+      Delay_ms(2000);
+    }
+    else
+    {
+      PORTD.F0 = 0;
+      PORTD.F0 = 0;
+    }
+    Delay_ms(250);
+  }
+}
